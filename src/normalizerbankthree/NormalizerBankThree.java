@@ -26,10 +26,8 @@ import utilities.xml.xmlMapper;
  */
 public class NormalizerBankThree {
 
-   private static final String IN_EXCHANGE = "normalizer_exchange";
-    private static final String IN_QUEUE = "bank_three_normalizer";
-    private static final String OUT_QUEUE = "agregattor";
-    private static final String OUT_EXCHANGE = "";
+    private static final String IN_QUEUE = "bank_three_normalizer_gr1";
+    private static final String OUT_QUEUE = "agregattor_gr1";
     private static Channel channelIn;
     private static Channel channelOut;
     private static QueueingConsumer consumer;
@@ -41,9 +39,6 @@ public class NormalizerBankThree {
         try {
             channelIn = creator.createChannel();
             channelIn.queueDeclare(IN_QUEUE, false, false, false, null);
-            channelIn.exchangeDeclare(IN_EXCHANGE, "fanout");
-            channelIn.queueBind(IN_QUEUE,IN_EXCHANGE,"");
-            
             channelOut = creator.createChannel();
             channelOut.queueDeclare(OUT_QUEUE, false, false, false, null);
             consumer = new QueueingConsumer(channelIn);
@@ -61,7 +56,7 @@ public class NormalizerBankThree {
                 System.out.println("Got message: " + new String(delivery.getBody()));
                 String message = normalizeMessage(new String(delivery.getBody()));
                 BasicProperties probs = new BasicProperties().builder().correlationId(delivery.getProperties().getCorrelationId()).build();
-                channelOut.basicPublish(OUT_EXCHANGE, OUT_QUEUE, probs, message.getBytes());
+                channelOut.basicPublish("", OUT_QUEUE, probs, message.getBytes());
             } catch (InterruptedException ex) {
                 Logger.getLogger(NormalizerBankThree.class.getName()).log(Level.SEVERE, null, ex);
             } catch (ShutdownSignalException ex) {
@@ -74,9 +69,8 @@ public class NormalizerBankThree {
         }
     }
     private static String normalizeMessage(String message){
-        String tempMessage = message;
         XPath xPath = XPathFactory.newInstance().newXPath();
-        Document doc = xmlMapper.getXMLDocument(tempMessage);
+        Document doc = xmlMapper.getXMLDocument(message);
         try {
             String ssn = xPath.compile("/LoanRequest/ssn").evaluate(doc);
             ssn = ssn.substring(0,6) + "-" + ssn.substring(6, ssn.length());
