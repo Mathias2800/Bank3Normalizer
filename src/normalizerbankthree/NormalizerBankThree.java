@@ -27,7 +27,7 @@ import utilities.xml.xmlMapper;
 public class NormalizerBankThree {
 
     private static final String IN_QUEUE = "bank_three_normalizer_gr1";
-    private static final String OUT_QUEUE = "agregattor_gr1";
+    private static final String OUT_QUEUE = "aggregator_gr1";
     private static Channel channelIn;
     private static Channel channelOut;
     private static QueueingConsumer consumer;
@@ -48,15 +48,16 @@ public class NormalizerBankThree {
             Logger.getLogger(NormalizerBankThree.class.getName()).log(Level.SEVERE, null, ex);
         }
         
+        System.out.println("Normalizer for Bankthree is running");
         while(true){
             try {
-                System.out.println("Normalizer for Bankthree is running");
                 Delivery delivery = consumer.nextDelivery();
-                channelIn.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
+                //channelIn.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
                 System.out.println("Got message: " + new String(delivery.getBody()));
                 String message = normalizeMessage(new String(delivery.getBody()));
                 BasicProperties probs = new BasicProperties().builder().correlationId(delivery.getProperties().getCorrelationId()).build();
                 channelOut.basicPublish("", OUT_QUEUE, probs, message.getBytes());
+                System.out.println("reply: " + message);
             } catch (InterruptedException ex) {
                 Logger.getLogger(NormalizerBankThree.class.getName()).log(Level.SEVERE, null, ex);
             } catch (ShutdownSignalException ex) {
@@ -72,9 +73,11 @@ public class NormalizerBankThree {
         XPath xPath = XPathFactory.newInstance().newXPath();
         Document doc = xmlMapper.getXMLDocument(message);
         try {
-            String ssn = xPath.compile("/LoanRequest/ssn").evaluate(doc);
+            String ssn = xPath.compile("/LoanResponse/ssn").evaluate(doc);
+           // System.out.println("ssn " +ssn);
             ssn = ssn.substring(0,6) + "-" + ssn.substring(6, ssn.length());
             doc.getElementsByTagName("ssn").item(0).getFirstChild().setNodeValue(ssn);
+           // System.out.println("ssn " +ssn);
         } catch (XPathExpressionException ex) {
             Logger.getLogger(NormalizerBankThree.class.getName()).log(Level.SEVERE, null, ex);
         }
