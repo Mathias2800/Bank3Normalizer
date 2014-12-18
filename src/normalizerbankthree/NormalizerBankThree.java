@@ -42,7 +42,7 @@ public class NormalizerBankThree {
             channelOut = creator.createChannel();
             channelOut.queueDeclare(OUT_QUEUE, false, false, false, null);
             consumer = new QueueingConsumer(channelIn);
-            channelIn.basicConsume(IN_QUEUE, consumer);
+            channelIn.basicConsume(IN_QUEUE, true, consumer);
             
         } catch (IOException ex) {
             Logger.getLogger(NormalizerBankThree.class.getName()).log(Level.SEVERE, null, ex);
@@ -52,7 +52,6 @@ public class NormalizerBankThree {
         while(true){
             try {
                 Delivery delivery = consumer.nextDelivery();
-                //channelIn.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
                 System.out.println("Got message: " + new String(delivery.getBody()));
                 String message = normalizeMessage(new String(delivery.getBody()));
                 BasicProperties probs = new BasicProperties().builder().correlationId(delivery.getProperties().getCorrelationId()).build();
@@ -74,10 +73,8 @@ public class NormalizerBankThree {
         Document doc = xmlMapper.getXMLDocument(message);
         try {
             String ssn = xPath.compile("/LoanResponse/ssn").evaluate(doc);
-           // System.out.println("ssn " +ssn);
             ssn = ssn.substring(0,6) + "-" + ssn.substring(6, ssn.length());
             doc.getElementsByTagName("ssn").item(0).getFirstChild().setNodeValue(ssn);
-           // System.out.println("ssn " +ssn);
         } catch (XPathExpressionException ex) {
             Logger.getLogger(NormalizerBankThree.class.getName()).log(Level.SEVERE, null, ex);
         }
